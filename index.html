@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirDrop Anywhere</title>
+    <style>
+        :root {
+            --primary-color: #0071e3;
+            --secondary-color: #f5f5f7;
+            --text-color: #1d1d1f;
+            --light-text: #86868b;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 免责协议模态框样式 */
+        .disclaimer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .disclaimer-modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .disclaimer-content {
+            background-color: white;
+            border-radius: var(--border-radius);
+            max-width: 800px;
+            max-height: 80vh;
+            padding: 30px;
+            overflow-y: auto;
+            box-shadow: var(--box-shadow);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .disclaimer-modal.hidden .disclaimer-content {
+            transform: translateY(-20px);
+        }
+        
+        .disclaimer-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            text-align: center;
+        }
+        
+        .disclaimer-text {
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .disclaimer-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .disclaimer-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .disclaimer-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .disclaimer-agree {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .disclaimer-agree:hover {
+            background-color: #0062c3;
+        }
+        
+        .disclaimer-decline {
+            background-color: #e53e3e;
+            color: white;
+        }
+        
+        .disclaimer-decline:hover {
+            background-color: #c53030;
+        }
+        
+        /* 主应用容器 */
+        .app-container {
+            display: none;
+            padding: 20px;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .app-container.visible {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            box-shadow: var(--box-shadow);
+        }
+        
+        h1 {
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .mode-selector {
+            display: flex;
+            background-color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-btn.active {
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--light-text);
+        }
+        
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #d2d2d7;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #0062c3;
+        }
+        
+        .btn:disabled {
+            background-color: #a7a7a7;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .file-preview {
+            width: 100%;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--secondary-color);
+            display: none;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .file-icon {
+            font-size: 40px;
+            margin-right: 15px;
+            color: var(--primary-color);
+        }
+        
+        .file-details {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .file-size {
+            font-size: 12px;
+            color: var(--light-text);
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+        
+        .status.connecting {
+            background-color: rgba(0, 113, 227, 0.1);
+            color: var(--primary-color);
+            display: block;
+        }
+        
+        .status.connected {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            display: block;
+        }
+        
+        .status.error {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            display: block;
+        }
+        
+        .progress-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background-color: #e9e9e9;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            text-align: center;
+            font-size: 12px;
+            color: var(--light-text);
+            margin-top: 5px;
+        }
+        
+        .confirmation-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .dialog-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 80%;
+            max-width: 400px;
+            box-shadow: var(--box-shadow);
+        }
+        
+        .dialog-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .dialog-message {
+            margin-bottom: 20px;
+            color: var(--light-text);
+        }
+        
+        .dialog-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .dialog-buttons button {
+            flex: 1;
+        }
+        
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            padding: 10px;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-item-name {
+            word-break: break-all;
+        }
+        
+        .file-item-size {
+            color: var(--light-text);
+            font-size: 12px;
+            white-space: nowrap;
+            margin-left: 10px;
+        }
+        
+        /* 加载动画 */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,113,227,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 免责协议模态框 -->
+    <div id="disclaimer-modal" class="disclaimer-modal">
+        <div class="disclaimer-content">
+            <div class="disclaimer-title">免责协议</div>
+            <div class="disclaimer-text">
+                <p><strong>重要提示：</strong>在使用本文件传输服务前，请仔细阅读以下免责协议。</p>
+                
+                <p>1. 本服务是一个点对点(P2P)文件传输工具，所有文件直接在用户设备间传输，不经过任何中央服务器。</p>
+                
+                <p>2. 作为服务提供方，我们不对用户传输的任何内容负责。用户需自行确保传输内容的合法性。</p>
+                
+                <p>3. 禁止使用本服务传输任何违法、侵权、淫秽、暴力或其他不当内容。违反此规定的责任完全由用户承担。</p>
+                
+                <p>4. 我们不会监控、审查或存储用户传输的任何文件内容，但保留配合执法部门调查的权利。</p>
+                
+                <p>5. 使用本服务即表示您确认：您有合法权利传输相关文件，且文件内容不违反任何适用法律法规。</p>
+                
+                <p>6. 我们不对因使用本服务导致的任何直接或间接损失承担责任，包括但不限于数据损失、隐私泄露等。</p>
+                
+                <p>7. 本服务按"原样"提供，不提供任何明示或暗示的担保。</p>
+                
+                <p>8. 我们保留随时修改本协议的权利，修改后的协议将在公布后立即生效。</p>
+                
+                <p><strong>警告：</strong>传输或接收非法内容可能导致法律后果。请确保您了解并遵守所有适用法律。</p>
+            </div>
+            <div class="disclaimer-buttons">
+                <button id="disagree-btn" class="disclaimer-btn disclaimer-decline">不同意</button>
+                <button id="agree-btn" class="disclaimer-btn disclaimer-agree">同意并继续</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用容器 -->
+    <div id="app-container" class="app-container">
+        <div class="container">
+            <h1>AirDrop Anywhere</h1>
+            
+            <div class="mode-selector">
+                <button id="sender-btn" class="mode-btn active">发送</button>
+                <button id="receiver-btn" class="mode-btn">接收</button>
+            </div>
+            
+            <!-- 发送面板 -->
+            <div id="sender-panel" class="panel active">
+                <div class="input-group">
+                    <label for="file-input">选择文件(支持任意类型)</label>
+                    <input type="file" id="file-input" multiple>
+                </div>
+                <div class="input-group">
+                    <label for="sender-code">传输代号</label>
+                    <input type="text" id="sender-code" placeholder="输入共享代码">
+                </div>
+                <div id="file-list" class="file-list" style="display: none;"></div>
+                <button id="start-sending" class="btn">开始传输</button>
+                <div id="sender-status" class="status"></div>
+                <div class="progress-container" id="sender-progress">
+                    <div class="progress-bar">
+                        <div class="progress" id="sender-progress-bar"></div>
+                    </div>
+                    <div class="progress-text" id="sender-progress-text">0%</div>
+                </div>
+                <div id="sender-preview" class="file-preview"></div>
+            </div>
+            
+            <!-- 接收面板 -->
+            <div id="receiver-panel" class="panel">
+                <div class="input-group">
+                    <label for="receiver-code">传输代号</label>
+                    <input type="text" id="receiver-code" placeholder="输入发送方提供的代码">
+                </div>
+                <button id="start-receiving" class="btn">开始接收</button>
+                <div id="receiver-status" class="status"></div>
+                <div class="progress-container" id="receiver-progress">
+                    <div class="progress-bar">
+                        <div class="progress" id="receiver-progress-bar"></div>
+                    </div>
+                    <div class="progress-text" id="receiver-progress-text">0%</div>
+                </div>
+                <div id="receiver-preview" class="file-preview"></div>
+            </div>
+        </div>
+
+        <!-- 接收确认对话框 -->
+        <div id="confirmation-dialog" class="confirmation-dialog">
+            <div class="dialog-content">
+                <div class="dialog-title">接收文件请求</div>
+                <div class="dialog-message" id="dialog-message"></div>
+                <div id="incoming-files" class="file-list"></div>
+                <div class="dialog-buttons">
+                    <button id="confirm-receive" class="btn">接收</button>
+                    <button id="cancel-receive" class="btn btn-secondary">拒绝</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 免责协议处理
+            const disclaimerModal = document.getElementById('disclaimer-modal');
+            const agreeBtn = document.getElementById('agree-btn');
+            const disagreeBtn = document.getElementById('disagree-btn');
+            const appContainer = document.getElementById('app-container');
+            
+            // 检查是否已同意免责协议
+            function checkDisclaimer() {
+                try {
+                    if(localStorage.getItem('disclaimerAgreed') === 'true') {
+                        return true;
+                    }
+                    
+                    // 检查cookie作为后备
+                    const cookies = document.cookie.split(';');
+                    for(const cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if(name === 'disclaimerAgreed' && value === 'true') {
+                            return true;
+                        }
+                    }
+                    
+                    return false;
+                } catch(e) {
+                    console.error('Error checking disclaimer status:', e);
+                    return false;
+                }
+            }
+            
+            // 设置同意状态
+            function setDisclaimerAgreed() {
+                try {
+                    localStorage.setItem('disclaimerAgreed', 'true');
+                    // 同时设置cookie作为后备
+                    document.cookie = "disclaimerAgreed=true; max-age=31536000; path=/"; // 1年有效期
+                } catch(e) {
+                    console.error('Error setting disclaimer status:', e);
+                    // 仅使用cookie
+                    document.cookie = "disclaimerAgreed=true; max-age=31536000; path=/";
+                }
+            }
+            
+            // 初始化显示状态
+            if(checkDisclaimer()) {
+                disclaimerModal.style.display = 'none';
+                appContainer.classList.add('visible');
+            } else {
+                disclaimerModal.style.display = 'flex';
+                appContainer.style.display = 'none';
+            }
+            
+            // 同意按钮处理
+            agreeBtn.addEventListener('click', function() {
+                // 添加点击反馈
+                agreeBtn.disabled = true;
+                agreeBtn.innerHTML = '<span class="loader"></span> 处理中...';
+                
+                setDisclaimerAgreed();
+                
+                // 动画效果
+                disclaimerModal.classList.add('hidden');
+                
+                setTimeout(() => {
+                    disclaimerModal.style.display = 'none';
+                    appContainer.style.display = 'flex';
+                    
+                    // 强制重绘
+                    void appContainer.offsetHeight;
+                    
+                    appContainer.classList.add('visible');
+                    
+                    // 重置按钮状态
+                    agreeBtn.disabled = false;
+                    agreeBtn.textContent = '同意并继续';
+                }, 300);
+            });
+            
+            // 不同意按钮处理
+            disagreeBtn.addEventListener('click', function() {
+                // 添加点击反馈
+                disagreeBtn.disabled = true;
+                disagreeBtn.textContent = '正在退出...';
+                
+                // 显示提示信息
+                const message = document.createElement('div');
+                message.textContent = '您必须同意免责协议才能使用本服务';
+                message.style.textAlign = 'center';
+                message.style.marginTop = '15px';
+                message.style.color = '#e53e3e';
+                document.querySelector('.disclaimer-content').appendChild(message);
+                
+                // 3秒后重定向
+                setTimeout(() => {
+                    window.location.href = 'about:blank';
+                }, 3000);
+            });
+            
+            // 模式切换
+            const senderBtn = document.getElementById('sender-btn');
+            const receiverBtn = document.getElementById('receiver-btn');
+            const senderPanel = document.getElementById('sender-panel');
+            const receiverPanel = document.getElementById('receiver-panel');
+            
+            senderBtn.addEventListener('click', function() {
+                resetAll();
+                senderBtn.classList.add('active');
+                receiverBtn.classList.remove('active');
+                senderPanel.classList.add('active');
+                receiverPanel.classList.remove('active');
+            });
+            
+            receiverBtn.addEventListener('click', function() {
+                resetAll();
+                receiverBtn.classList.add('active');
+                senderBtn.classList.remove('active');
+                receiverPanel.classList.add('active');
+                senderPanel.classList.remove('active');
+            });
+            
+            // 全局变量
+            let peer;
+            let conn;
+            let fileReader = new FileReader();
+            let currentFiles = [];
+            let currentCode = '';
+            let isReceivingConfirmed = false;
+            let pendingFilesInfo = [];
+            let receivedFiles = [];
+            let currentFileIndex = 0;
+            let currentFileOffset = 0;
+            let totalSent = 0;
+            let totalSize = 0;
+            
+            // 发送端元素
+            const fileInput = document.getElementById('file-input');
+            const senderCodeInput = document.getElementById('sender-code');
+            const startSendingBtn = document.getElementById('start-sending');
+            const senderStatus = document.getElementById('sender-status');
+            const senderPreview = document.getElementById('sender-preview');
+            const senderProgress = document.getElementById('sender-progress');
+            const senderProgressBar = document.getElementById('sender-progress-bar');
+            const senderProgressText = document.getElementById('sender-progress-text');
+            const fileList = document.getElementById('file-list');
+            
+            // 接收端元素
+            const receiverCodeInput = document.getElementById('receiver-code');
+            const startReceivingBtn = document.getElementById('start-receiving');
+            const receiverStatus = document.getElementById('receiver-status');
+            const receiverPreview = document.getElementById('receiver-preview');
+            const receiverProgress = document.getElementById('receiver-progress');
+            const receiverProgressBar = document.getElementById('receiver-progress-bar');
+            const receiverProgressText = document.getElementById('receiver-progress-text');
+            
+            // 对话框元素
+            const confirmationDialog = document.getElementById('confirmation-dialog');
+            const confirmReceiveBtn = document.getElementById('confirm-receive');
+            const cancelReceiveBtn = document.getElementById('cancel-receive');
+            const dialogMessage = document.getElementById('dialog-message');
+            const incomingFilesList = document.getElementById('incoming-files');
+            
+            // 文件选择处理
+            fileInput.addEventListener('change', function(e) {
+                currentFiles = Array.from(e.target.files);
+                updateFileList();
+            });
+            
+            function updateFileList() {
+                if(currentFiles.length === 0) {
+                    fileList.style.display = 'none';
+                    return;
+                }
+                
+                fileList.style.display = 'block';
+                fileList.innerHTML = '';
+                
+                currentFiles.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-item-name">${file.name}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+                    `;
+                    fileList.appendChild(fileItem);
+                });
+            }
+            
+            // 发送端逻辑
+            startSendingBtn.addEventListener('click', startSending);
+            
+            function startSending() {
+                currentCode = senderCodeInput.value.trim();
+                
+                if (currentFiles.length === 0) {
+                    updateStatus(senderStatus, '请选择至少一个文件', 'error');
+                    return;
+                }
+                
+                if (!currentCode) {
+                    updateStatus(senderStatus, '请输入传输代号', 'error');
+                    return;
+                }
+                
+                // 禁用按钮防止重复点击
+                startSendingBtn.disabled = true;
+                startSendingBtn.textContent = '准备传输...';
+                
+                // 计算总大小
+                totalSize = currentFiles.reduce((sum, file) => sum + file.size, 0);
+                
+                // 初始化Peer
+                peer = new Peer(currentCode + '-sender');
+                
+                peer.on('open', function(id) {
+                    updateStatus(senderStatus, '等待接收方连接...', 'connecting');
+                    startSendingBtn.textContent = '等待接收方...';
+                    
+                    // 显示文件预览
+                    showFilesPreview(currentFiles, senderPreview);
+                    
+                    // 等待接收方连接
+                    peer.on('connection', function(connection) {
+                        conn = connection;
+                        updateStatus(senderStatus, '接收方已连接，等待确认...', 'connecting');
+                        startSendingBtn.textContent = '等待接收方确认...';
+                        
+                        // 发送文件信息给接收方
+                        const filesInfo = currentFiles.map(file => ({
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            lastModified: file.lastModified
+                        }));
+                        
+                        conn.send({
+                            type: 'files-info',
+                            files: filesInfo,
+                            totalSize: totalSize
+                        });
+                        
+                        // 监听接收方的确认
+                        conn.on('data', function(data) {
+                            if (data.type === 'receive-confirmed') {
+                                updateStatus(senderStatus, '接收方已确认，开始传输...', 'connected');
+                                senderProgress.style.display = 'block';
+                                startSendingBtn.textContent = '传输中...';
+                                sendFilesData();
+                            } else if (data.type === 'receive-canceled') {
+                                updateStatus(senderStatus, '接收方拒绝了文件传输', 'error');
+                                startSendingBtn.disabled = false;
+                                startSendingBtn.textContent = '开始传输';
+                                conn.close();
+                            }
+                        });
+                    });
+                });
+                
+                peer.on('error', function(err) {
+                    updateStatus(senderStatus, '错误: ' + err, 'error');
+                    startSendingBtn.disabled = false;
+                    startSendingBtn.textContent = '开始传输';
+                });
+            }
+            
+            function sendFilesData() {
+                updateStatus(senderStatus, '正在发送文件数据...', 'connecting');
+                
+                // 重置传输状态
+                currentFileIndex = 0;
+                currentFileOffset = 0;
+                totalSent = 0;
+                
+                function sendNextFile() {
+                    if(currentFileIndex >= currentFiles.length) {
+                        // 所有文件发送完成
+                        conn.send({ type: 'transfer-complete' });
+                        updateStatus(senderStatus, '所有文件发送完成', 'connected');
+                        startSendingBtn.disabled = false;
+                        startSendingBtn.textContent = '开始传输';
+                        return;
+                    }
+                    
+                    const file = currentFiles[currentFileIndex];
+                    const chunkSize = 256 * 1024; // 256KB chunks
+                    
+                    fileReader.onload = function(e) {
+                        conn.send({
+                            type: 'file-chunk',
+                            fileIndex: currentFileIndex,
+                            data: e.target.result,
+                            offset: currentFileOffset,
+                            total: file.size
+                        });
+                        
+                        currentFileOffset += e.target.result.byteLength;
+                        totalSent += e.target.result.byteLength;
+                        
+                        // 更新总进度
+                        const percent = Math.round((totalSent / totalSize) * 100);
+                        updateProgress(senderProgressBar, senderProgressText, percent);
+                        
+                        if (currentFileOffset < file.size) {
+                            // 继续发送当前文件的下一块
+                            readNextChunk(file, currentFileOffset, chunkSize);
+                        } else {
+                            // 当前文件发送完成，转到下一个文件
+                            currentFileIndex++;
+                            currentFileOffset = 0;
+                            sendNextFile();
+                        }
+                    };
+                    
+                    // 开始发送当前文件
+                    readNextChunk(file, currentFileOffset, chunkSize);
+                }
+                
+                // 开始发送第一个文件
+                sendNextFile();
+            }
+            
+            // 接收端逻辑
+            startReceivingBtn.addEventListener('click', startReceiving);
+            
+            function startReceiving() {
+                currentCode = receiverCodeInput.value.trim();
+                
+                if (!currentCode) {
+                    updateStatus(receiverStatus, '请输入传输代号', 'error');
+                    return;
+                }
+                
+                // 禁用按钮防止重复点击
+                startReceivingBtn.disabled = true;
+                startReceivingBtn.textContent = '正在连接...';
+                
+                // 初始化Peer
+                peer = new Peer(currentCode + '-receiver');
+                
+                peer.on('open', function(id) {
+                    updateStatus(receiverStatus, '正在连接发送方...', 'connecting');
+                    startReceivingBtn.textContent = '等待发送方...';
+                    
+                    // 连接到发送方
+                    conn = peer.connect(currentCode + '-sender');
+                    
+                    conn.on('open', function() {
+                        updateStatus(receiverStatus, '已连接到发送方，等待文件信息...', 'connected');
+                        startReceivingBtn.textContent = '等待文件信息...';
+                        
+                        // 准备接收数据
+                        receivedFiles = [];
+                        isReceivingConfirmed = false;
+                        
+                        conn.on('data', function(data) {
+                            if (data.type === 'files-info') {
+                                // 显示确认对话框
+                                pendingFilesInfo = data.files;
+                                totalSize = data.totalSize;
+                                showConfirmationDialog(data);
+                                startReceivingBtn.textContent = '等待确认...';
+                            } 
+                            else if (data.type === 'file-chunk' && isReceivingConfirmed) {
+                                // 确保文件对象已创建
+                                if(!receivedFiles[data.fileIndex]) {
+                                    receivedFiles[data.fileIndex] = {
+                                        chunks: [],
+                                        name: pendingFilesInfo[data.fileIndex].name,
+                                        type: pendingFilesInfo[data.fileIndex].type,
+                                        size: pendingFilesInfo[data.fileIndex].size
+                                    };
+                                }
+                                
+                                // 存储数据块
+                                receivedFiles[data.fileIndex].chunks.push({
+                                    offset: data.offset,
+                                    data: data.data
+                                });
+                                
+                                // 计算已接收大小
+                                let receivedSize = 0;
+                                receivedFiles.forEach(file => {
+                                    if(file && file.chunks) {
+                                        file.chunks.forEach(chunk => {
+                                            receivedSize += chunk.data.byteLength;
+                                        });
+                                    }
+                                });
+                                
+                                // 更新总进度
+                                const percent = Math.round((receivedSize / totalSize) * 100);
+                                updateProgress(receiverProgressBar, receiverProgressText, percent);
+                                
+                                updateStatus(receiverStatus, `正在接收文件数据 (${percent}%)`, 'connecting');
+                                startReceivingBtn.textContent = `接收中 ${percent}%`;
+                            } 
+                            else if (data.type === 'transfer-complete' && isReceivingConfirmed) {
+                                // 所有文件接收完成
+                                updateStatus(receiverStatus, '文件接收完成', 'connected');
+                                startReceivingBtn.disabled = false;
+                                startReceivingBtn.textContent = '开始接收';
+                                
+                                // 重组所有文件
+                                assembleReceivedFiles();
+                            }
+                        });
+                    });
+                });
+                
+                peer.on('error', function(err) {
+                    updateStatus(receiverStatus, '错误: ' + err, 'error');
+                    startReceivingBtn.disabled = false;
+                    startReceivingBtn.textContent = '开始接收';
+                });
+            }
+            
+            function showConfirmationDialog(data) {
+                const totalSize = data.totalSize;
+                dialogMessage.textContent = `有用户想要向您发送 ${data.files.length} 个文件 (共 ${formatFileSize(totalSize)})，是否接收？`;
+                
+                // 显示文件列表
+                incomingFilesList.innerHTML = '';
+                data.files.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-item-name">${file.name}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+                    `;
+                    incomingFilesList.appendChild(fileItem);
+                });
+                
+                confirmationDialog.style.display = 'flex';
+            }
+            
+            // 确认接收按钮
+            confirmReceiveBtn.addEventListener('click', function() {
+                isReceivingConfirmed = true;
+                confirmationDialog.style.display = 'none';
+                updateStatus(receiverStatus, '已确认接收，等待数据...', 'connected');
+                receiverProgress.style.display = 'block';
+                conn.send({ type: 'receive-confirmed' });
+                startReceivingBtn.textContent = '准备接收...';
+            });
+            
+            // 取消接收按钮
+            cancelReceiveBtn.addEventListener('click', function() {
+                confirmationDialog.style.display = 'none';
+                updateStatus(receiverStatus, '已拒绝接收文件', 'error');
+                conn.send({ type: 'receive-canceled' });
+                conn.close();
+                startReceivingBtn.disabled = false;
+                startReceivingBtn.textContent = '开始接收';
+            });
+            
+            function assembleReceivedFiles() {
+                // 处理每个接收到的文件
+                receivedFiles.forEach((fileInfo, index) => {
+                    if(!fileInfo || !fileInfo.chunks) return;
+                    
+                    // 按偏移量排序块
+                    fileInfo.chunks.sort((a, b) => a.offset - b.offset);
+                    
+                    // 合并所有ArrayBuffer
+                    const buffer = new Uint8Array(fileInfo.size);
+                    
+                    fileInfo.chunks.forEach(chunk => {
+                        buffer.set(new Uint8Array(chunk.data), chunk.offset);
+                    });
+                    
+                    // 创建Blob
+                    const blob = new Blob([buffer], { type: fileInfo.type });
+                    
+                    // 创建下载链接
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileInfo.name || `file_${index + 1}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+                
+                // 显示接收到的文件预览
+                showFilesPreview(pendingFilesInfo, receiverPreview);
+            }
+            
+            function showFilesPreview(files, container) {
+                container.innerHTML = '';
+                
+                if(files.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+                
+                container.style.display = 'block';
+                
+                files.forEach(file => {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = 'file-info';
+                    
+                    const fileIcon = document.createElement('div');
+                    fileIcon.className = 'file-icon';
+                    fileIcon.innerHTML = getFileIcon(file.name || file.type);
+                    
+                    const fileDetails = document.createElement('div');
+                    fileDetails.className = 'file-details';
+                    
+                    const fileName = document.createElement('div');
+                    fileName.className = 'file-name';
+                    fileName.textContent = file.name || '未知文件';
+                    
+                    const fileSize = document.createElement('div');
+                    fileSize.className = 'file-size';
+                    fileSize.textContent = formatFileSize(file.size);
+                    
+                    fileDetails.appendChild(fileName);
+                    fileDetails.appendChild(fileSize);
+                    fileDiv.appendChild(fileIcon);
+                    fileDiv.appendChild(fileDetails);
+                    container.appendChild(fileDiv);
+                });
+            }
+            
+            function getFileIcon(filename) {
+                if(!filename) return '📁';
+                
+                const ext = filename.split('.').pop().toLowerCase();
+                const type = filename.split('/')[0];
+                
+                const icons = {
+                    // 图片
+                    png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', bmp: '🖼️', svg: '🖼️', webp: '🖼️',
+                    // 视频
+                    mp4: '🎬', mov: '🎬', avi: '🎬', mkv: '🎬', webm: '🎬', wmv: '🎬',
+                    // 音频
+                    mp3: '🎵', wav: '🎵', ogg: '🎵', flac: '🎵', aac: '🎵',
+                    // 文档
+                    pdf: '📄', doc: '📄', docx: '📄', xls: '📄', xlsx: '📄', ppt: '📄', pptx: '📄', txt: '📄',
+                    // 压缩文件
+                    zip: '🗜️', rar: '🗜️', '7z': '🗜️', tar: '🗜️', gz: '🗜️',
+                    // 代码
+                    html: '📝', css: '📝', js: '📝', json: '📝', xml: '📝', php: '📝', py: '📝', java: '📝', cpp: '📝', h: '📝',
+                    // 其他
+                    exe: '⚙️', dmg: '💽', pkg: '📦', 
+                    default: '📁'
+                };
+                
+                return icons[ext] || icons[type] || icons.default;
+            }
+            
+            // 辅助函数
+            function readNextChunk(file, offset, chunkSize) {
+                const fileSlice = file.slice(offset, offset + chunkSize);
+                fileReader.readAsArrayBuffer(fileSlice);
+            }
+            
+            function updateStatus(element, message, type) {
+                element.textContent = message;
+                element.className = 'status ' + type;
+            }
+            
+            function updateProgress(progressBar, progressText, percent) {
+                progressBar.style.width = percent + '%';
+                progressText.textContent = percent + '%';
+            }
+            
+            function formatFileSize(bytes) {
+                if (typeof bytes !== 'number' || isNaN(bytes)) return '未知大小';
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            function resetAll() {
+                // 重置所有状态
+                if (peer) {
+                    peer.destroy();
+                    peer = null;
+                }
+                
+                if (conn) {
+                    conn.close();
+                    conn = null;
+                }
+                
+                senderStatus.className = 'status';
+                senderStatus.textContent = '';
+                senderPreview.style.display = 'none';
+                senderPreview.innerHTML = '';
+                senderProgress.style.display = 'none';
+                senderProgressBar.style.width = '0%';
+                senderProgressText.textContent = '0%';
+                
+                receiverStatus.className = 'status';
+                receiverStatus.textContent = '';
+                receiverPreview.style.display = 'none';
+                receiverPreview.innerHTML = '';
+                receiverProgress.style.display = 'none';
+                receiverProgressBar.style.width = '0%';
+                receiverProgressText.textContent = '0%';
+                
+                fileInput.value = '';
+                senderCodeInput.value = '';
+                receiverCodeInput.value = '';
+                
+                confirmationDialog.style.display = 'none';
+                currentFiles = [];
+                receivedFiles = [];
+                currentCode = '';
+                isReceivingConfirmed = false;
+                pendingFilesInfo = [];
+                currentFileIndex = 0;
+                currentFileOffset = 0;
+                totalSent = 0;
+                totalSize = 0;
+                
+                fileList.style.display = 'none';
+                fileList.innerHTML = '';
+                
+                // 重置按钮状态
+                startSendingBtn.disabled = false;
+                startSendingBtn.textContent = '开始传输';
+                startReceivingBtn.disabled = false;
+                startReceivingBtn.textContent = '开始接收';
+            }
+            
+            // 初始化PeerJS库
+            function initPeerJS() {
+                if(typeof Peer === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js';
+                    script.onload = function() {
+                        console.log('PeerJS loaded successfully');
+                    };
+                    script.onerror = function() {
+                        console.error('Failed to load PeerJS');
+                        updateStatus(senderStatus, '无法加载PeerJS库，请检查网络连接', 'error');
+                        updateStatus(receiverStatus, '无法加载PeerJS库，请检查网络连接', 'error');
+                    };
+                    document.body.appendChild(script);
+                }
+            }
+            
+            // 初始化应用
+            initPeerJS();
+        });
+    </script>
+</body>
+</html>
