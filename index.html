@@ -3,45 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirDrop Anywhere</title>
+    <title>GitHub文件传输</title>
     <style>
         :root {
-            --primary-color: #0071e3;
-            --secondary-color: #f5f5f7;
-            --text-color: #1d1d1f;
-            --light-text: #86868b;
-            --border-radius: 12px;
-            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --primary-color: #2b3137; /* GitHub风格颜色 */
+            --secondary-color: #f6f8fa;
+            --text-color: #24292e;
+            --light-text: #586069;
+            --border-radius: 6px;
+            --box-shadow: 0 1px 3px rgba(27, 31, 35, 0.12);
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             background-color: var(--secondary-color);
             color: var(--text-color);
             margin: 0;
             padding: 0;
+            line-height: 1.5;
         }
         
-        /* 免责协议模态框样式 */
+        /* 免责协议模态框 */
         .disclaimer-modal {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(27, 31, 35, 0.8);
             z-index: 1000;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-        
-        .disclaimer-modal.hidden {
-            opacity: 0;
-            pointer-events: none;
         }
         
         .disclaimer-content {
@@ -52,12 +46,6 @@
             padding: 30px;
             overflow-y: auto;
             box-shadow: var(--box-shadow);
-            transform: translateY(0);
-            transition: transform 0.3s ease;
-        }
-        
-        .disclaimer-modal.hidden .disclaimer-content {
-            transform: translateY(-20px);
         }
         
         .disclaimer-title {
@@ -86,29 +74,16 @@
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
         
-        .disclaimer-btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .disclaimer-agree {
-            background-color: var(--primary-color);
+        .agree-btn {
+            background-color: #2ea44f;
             color: white;
         }
         
-        .disclaimer-agree:hover {
-            background-color: #0062c3;
-        }
-        
-        .disclaimer-decline {
-            background-color: #e53e3e;
+        .disagree-btn {
+            background-color: #d73a49;
             color: white;
-        }
-        
-        .disclaimer-decline:hover {
-            background-color: #c53030;
         }
         
         /* 主应用容器 */
@@ -118,13 +93,6 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-        
-        .app-container.visible {
-            display: flex;
-            opacity: 1;
         }
         
         .container {
@@ -140,7 +108,8 @@
             text-align: center;
             font-weight: 600;
             margin-bottom: 30px;
-            font-size: 28px;
+            font-size: 24px;
+            color: var(--primary-color);
         }
         
         .mode-selector {
@@ -149,6 +118,7 @@
             border-radius: var(--border-radius);
             padding: 5px;
             margin-bottom: 25px;
+            border: 1px solid #e1e4e8;
         }
         
         .mode-btn {
@@ -159,13 +129,12 @@
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            border-radius: 4px;
         }
         
         .mode-btn.active {
             background-color: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(27, 31, 35, 0.12);
             color: var(--primary-color);
         }
         
@@ -175,12 +144,6 @@
         
         .panel.active {
             display: block;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
         
         .input-group {
@@ -198,48 +161,38 @@
         input[type="text"],
         input[type="file"] {
             width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #d2d2d7;
+            padding: 10px 12px;
+            border: 1px solid #e1e4e8;
             border-radius: var(--border-radius);
-            font-size: 16px;
-            transition: border 0.3s;
+            font-size: 14px;
         }
         
         input[type="text"]:focus,
         input[type="file"]:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: #0366d6;
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3);
         }
         
         .btn {
             width: 100%;
-            padding: 14px;
-            background-color: var(--primary-color);
+            padding: 12px;
+            background-color: #2ea44f;
             color: white;
             border: none;
             border-radius: var(--border-radius);
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.3s;
         }
         
         .btn:hover {
-            background-color: #0062c3;
+            background-color: #2c974b;
         }
         
         .btn:disabled {
-            background-color: #a7a7a7;
+            background-color: #94d3a2;
             cursor: not-allowed;
-        }
-        
-        .btn-secondary {
-            background-color: var(--secondary-color);
-            color: var(--text-color);
-        }
-        
-        .btn-secondary:hover {
-            background-color: #e0e0e0;
         }
         
         .file-preview {
@@ -248,6 +201,7 @@
             margin-top: 20px;
             padding: 15px;
             background-color: var(--secondary-color);
+            border: 1px solid #e1e4e8;
             display: none;
         }
         
@@ -260,11 +214,7 @@
         .file-icon {
             font-size: 40px;
             margin-right: 15px;
-            color: var(--primary-color);
-        }
-        
-        .file-details {
-            flex: 1;
+            color: #0366d6;
         }
         
         .file-name {
@@ -285,23 +235,27 @@
             font-size: 14px;
             text-align: center;
             display: none;
+            border: 1px solid;
         }
         
         .status.connecting {
-            background-color: rgba(0, 113, 227, 0.1);
-            color: var(--primary-color);
+            background-color: #f1f8ff;
+            border-color: #c8e1ff;
+            color: #0366d6;
             display: block;
         }
         
         .status.connected {
-            background-color: rgba(40, 167, 69, 0.1);
-            color: #28a745;
+            background-color: #f0fff4;
+            border-color: #c2f0c2;
+            color: #22863a;
             display: block;
         }
         
         .status.error {
-            background-color: rgba(220, 53, 69, 0.1);
-            color: #dc3545;
+            background-color: #ffeef0;
+            border-color: #f9c3c6;
+            color: #cb2431;
             display: block;
         }
         
@@ -312,14 +266,14 @@
         
         .progress-bar {
             height: 6px;
-            background-color: #e9e9e9;
+            background-color: #e1e4e8;
             border-radius: 3px;
             overflow: hidden;
         }
         
         .progress {
             height: 100%;
-            background-color: var(--primary-color);
+            background-color: #2ea44f;
             width: 0%;
             transition: width 0.3s;
         }
@@ -338,7 +292,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(27, 31, 35, 0.5);
             z-index: 100;
             justify-content: center;
             align-items: center;
@@ -377,7 +331,7 @@
             max-height: 200px;
             overflow-y: auto;
             margin-bottom: 15px;
-            border: 1px solid #eee;
+            border: 1px solid #e1e4e8;
             border-radius: var(--border-radius);
             padding: 10px;
         }
@@ -386,7 +340,7 @@
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #e1e4e8;
         }
         
         .file-item:last-child {
@@ -407,11 +361,11 @@
         /* 加载动画 */
         .loader {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,113,227,.3);
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(27, 31, 35, 0.1);
             border-radius: 50%;
-            border-top-color: var(--primary-color);
+            border-top-color: #0366d6;
             animation: spin 1s ease-in-out infinite;
         }
         
@@ -426,29 +380,14 @@
         <div class="disclaimer-content">
             <div class="disclaimer-title">免责协议</div>
             <div class="disclaimer-text">
-                <p><strong>重要提示：</strong>在使用本文件传输服务前，请仔细阅读以下免责协议。</p>
-                
-                <p>1. 本服务是一个点对点(P2P)文件传输工具，所有文件直接在用户设备间传输，不经过任何中央服务器。</p>
-                
-                <p>2. 作为服务提供方，我们不对用户传输的任何内容负责。用户需自行确保传输内容的合法性。</p>
-                
-                <p>3. 禁止使用本服务传输任何违法、侵权、淫秽、暴力或其他不当内容。违反此规定的责任完全由用户承担。</p>
-                
-                <p>4. 我们不会监控、审查或存储用户传输的任何文件内容，但保留配合执法部门调查的权利。</p>
-                
-                <p>5. 使用本服务即表示您确认：您有合法权利传输相关文件，且文件内容不违反任何适用法律法规。</p>
-                
-                <p>6. 我们不对因使用本服务导致的任何直接或间接损失承担责任，包括但不限于数据损失、隐私泄露等。</p>
-                
-                <p>7. 本服务按"原样"提供，不提供任何明示或暗示的担保。</p>
-                
-                <p>8. 我们保留随时修改本协议的权利，修改后的协议将在公布后立即生效。</p>
-                
-                <p><strong>警告：</strong>传输或接收非法内容可能导致法律后果。请确保您了解并遵守所有适用法律。</p>
+                <p><strong>重要提示：</strong>本工具仅用于合法文件传输。</p>
+                <p>1. 所有文件直接在您的设备间传输，不经过任何服务器。</p>
+                <p>2. 禁止传输任何违法内容。</p>
+                <p>3. 使用本工具即表示您同意承担全部责任。</p>
             </div>
             <div class="disclaimer-buttons">
-                <button id="disagree-btn" class="disclaimer-btn disclaimer-decline">不同意</button>
-                <button id="agree-btn" class="disclaimer-btn disclaimer-agree">同意并继续</button>
+                <button id="disagree-btn" class="disclaimer-btn disagree-btn">不同意</button>
+                <button id="agree-btn" class="disclaimer-btn agree-btn">同意并继续</button>
             </div>
         </div>
     </div>
@@ -456,11 +395,11 @@
     <!-- 主应用容器 -->
     <div id="app-container" class="app-container">
         <div class="container">
-            <h1>AirDrop Anywhere</h1>
+            <h1>GitHub文件传输</h1>
             
             <div class="mode-selector">
-                <button id="sender-btn" class="mode-btn active">发送</button>
-                <button id="receiver-btn" class="mode-btn">接收</button>
+                <button id="sender-btn" class="mode-btn active">发送文件</button>
+                <button id="receiver-btn" class="mode-btn">接收文件</button>
             </div>
             
             <!-- 发送面板 -->
@@ -511,13 +450,12 @@
                 <div id="incoming-files" class="file-list"></div>
                 <div class="dialog-buttons">
                     <button id="confirm-receive" class="btn">接收</button>
-                    <button id="cancel-receive" class="btn btn-secondary">拒绝</button>
+                    <button id="cancel-receive" class="btn" style="background-color: #d73a49;">拒绝</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // 免责协议处理
@@ -527,94 +465,23 @@
             const appContainer = document.getElementById('app-container');
             
             // 检查是否已同意免责协议
-            function checkDisclaimer() {
-                try {
-                    if(localStorage.getItem('disclaimerAgreed') === 'true') {
-                        return true;
-                    }
-                    
-                    // 检查cookie作为后备
-                    const cookies = document.cookie.split(';');
-                    for(const cookie of cookies) {
-                        const [name, value] = cookie.trim().split('=');
-                        if(name === 'disclaimerAgreed' && value === 'true') {
-                            return true;
-                        }
-                    }
-                    
-                    return false;
-                } catch(e) {
-                    console.error('Error checking disclaimer status:', e);
-                    return false;
-                }
-            }
-            
-            // 设置同意状态
-            function setDisclaimerAgreed() {
-                try {
-                    localStorage.setItem('disclaimerAgreed', 'true');
-                    // 同时设置cookie作为后备
-                    document.cookie = "disclaimerAgreed=true; max-age=31536000; path=/"; // 1年有效期
-                } catch(e) {
-                    console.error('Error setting disclaimer status:', e);
-                    // 仅使用cookie
-                    document.cookie = "disclaimerAgreed=true; max-age=31536000; path=/";
-                }
-            }
-            
-            // 初始化显示状态
-            if(checkDisclaimer()) {
+            if(localStorage.getItem('disclaimerAgreed') === 'true') {
                 disclaimerModal.style.display = 'none';
-                appContainer.classList.add('visible');
-            } else {
-                disclaimerModal.style.display = 'flex';
-                appContainer.style.display = 'none';
+                appContainer.style.display = 'flex';
             }
             
-            // 同意按钮处理
+            // 同意按钮
             agreeBtn.addEventListener('click', function() {
-                // 添加点击反馈
-                agreeBtn.disabled = true;
-                agreeBtn.innerHTML = '<span class="loader"></span> 处理中...';
-                
-                setDisclaimerAgreed();
-                
-                // 动画效果
-                disclaimerModal.classList.add('hidden');
-                
-                setTimeout(() => {
-                    disclaimerModal.style.display = 'none';
-                    appContainer.style.display = 'flex';
-                    
-                    // 强制重绘
-                    void appContainer.offsetHeight;
-                    
-                    appContainer.classList.add('visible');
-                    
-                    // 重置按钮状态
-                    agreeBtn.disabled = false;
-                    agreeBtn.textContent = '同意并继续';
-                }, 300);
+                localStorage.setItem('disclaimerAgreed', 'true');
+                disclaimerModal.style.display = 'none';
+                appContainer.style.display = 'flex';
+                initPeerJS();
             });
             
-            // 不同意按钮处理
+            // 不同意按钮
             disagreeBtn.addEventListener('click', function() {
-                // 添加点击反馈
-                disagreeBtn.disabled = true;
-                disagreeBtn.textContent = '正在退出...';
-                
-                // 显示提示信息
-                const message = document.createElement('div');
-                message.textContent = '您必须同意免责协议才能使用本服务';
-                message.style.textAlign = 'center';
-                message.style.marginTop = '15px';
-                message.style.color = '#e53e3e';
-                document.querySelector('.disclaimer-content').appendChild(message);
-                
-                // 3秒后重定向
-                setTimeout(() => {
-                    window.location.href = 'about:blank';
-                }, 3000);
+                alert('您必须同意免责协议才能使用本服务');
+                window.location.href = 'about:blank';
             });
             
             // 模式切换
@@ -730,7 +597,15 @@
                 totalSize = currentFiles.reduce((sum, file) => sum + file.size, 0);
                 
                 // 初始化Peer
-                peer = new Peer(currentCode + '-sender');
+                peer = new Peer(currentCode + '-sender', {
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' }
+                        ]
+                    }
+                });
                 
                 peer.on('open', function(id) {
                     updateStatus(senderStatus, '等待接收方连接...', 'connecting');
@@ -855,7 +730,15 @@
                 startReceivingBtn.textContent = '正在连接...';
                 
                 // 初始化Peer
-                peer = new Peer(currentCode + '-receiver');
+                peer = new Peer(currentCode + '-receiver', {
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' }
+                        ]
+                    }
+                });
                 
                 peer.on('open', function(id) {
                     updateStatus(receiverStatus, '正在连接发送方...', 'connecting');
