@@ -6,7 +6,7 @@
     <title>GitHub文件传输</title>
     <style>
         :root {
-            --primary-color: #2b3137; /* GitHub风格颜色 */
+            --primary-color: #2b3137;
             --secondary-color: #f6f8fa;
             --text-color: #24292e;
             --light-text: #586069;
@@ -23,7 +23,6 @@
             line-height: 1.5;
         }
         
-        /* 免责协议模态框 */
         .disclaimer-modal {
             position: fixed;
             top: 0;
@@ -86,7 +85,6 @@
             color: white;
         }
         
-        /* 主应用容器 */
         .app-container {
             display: none;
             padding: 20px;
@@ -358,7 +356,6 @@
             margin-left: 10px;
         }
         
-        /* 加载动画 */
         .loader {
             display: inline-block;
             width: 16px;
@@ -375,7 +372,6 @@
     </style>
 </head>
 <body>
-    <!-- 免责协议模态框 -->
     <div id="disclaimer-modal" class="disclaimer-modal">
         <div class="disclaimer-content">
             <div class="disclaimer-title">免责协议</div>
@@ -392,7 +388,6 @@
         </div>
     </div>
 
-    <!-- 主应用容器 -->
     <div id="app-container" class="app-container">
         <div class="container">
             <h1>GitHub文件传输</h1>
@@ -402,7 +397,6 @@
                 <button id="receiver-btn" class="mode-btn">接收文件</button>
             </div>
             
-            <!-- 发送面板 -->
             <div id="sender-panel" class="panel active">
                 <div class="input-group">
                     <label for="file-input">选择文件(支持任意类型)</label>
@@ -424,7 +418,6 @@
                 <div id="sender-preview" class="file-preview"></div>
             </div>
             
-            <!-- 接收面板 -->
             <div id="receiver-panel" class="panel">
                 <div class="input-group">
                     <label for="receiver-code">传输代号</label>
@@ -442,7 +435,6 @@
             </div>
         </div>
 
-        <!-- 接收确认对话框 -->
         <div id="confirmation-dialog" class="confirmation-dialog">
             <div class="dialog-content">
                 <div class="dialog-title">接收文件请求</div>
@@ -602,9 +594,15 @@
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
                             { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' }
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { 
+                                urls: 'turn:numb.viagenie.ca',
+                                credential: 'muazkh',
+                                username: 'webrtc@live.com'
+                            }
                         ]
-                    }
+                    },
+                    debug: 3
                 });
                 
                 peer.on('open', function(id) {
@@ -619,6 +617,17 @@
                         conn = connection;
                         updateStatus(senderStatus, '接收方已连接，等待确认...', 'connecting');
                         startSendingBtn.textContent = '等待接收方确认...';
+                        
+                        // 添加连接监控
+                        monitorConnection(conn);
+                        
+                        // 设置超时
+                        const timeout = setTimeout(() => {
+                            if(!isReceivingConfirmed) {
+                                updateStatus(senderStatus, '接收方响应超时', 'error');
+                                conn.close();
+                            }
+                        }, 30000);
                         
                         // 发送文件信息给接收方
                         const filesInfo = currentFiles.map(file => ({
@@ -637,11 +646,13 @@
                         // 监听接收方的确认
                         conn.on('data', function(data) {
                             if (data.type === 'receive-confirmed') {
+                                clearTimeout(timeout);
                                 updateStatus(senderStatus, '接收方已确认，开始传输...', 'connected');
                                 senderProgress.style.display = 'block';
                                 startSendingBtn.textContent = '传输中...';
                                 sendFilesData();
                             } else if (data.type === 'receive-canceled') {
+                                clearTimeout(timeout);
                                 updateStatus(senderStatus, '接收方拒绝了文件传输', 'error');
                                 startSendingBtn.disabled = false;
                                 startSendingBtn.textContent = '开始传输';
@@ -652,7 +663,8 @@
                 });
                 
                 peer.on('error', function(err) {
-                    updateStatus(senderStatus, '错误: ' + err, 'error');
+                    console.error('PeerJS错误:', err);
+                    updateStatus(senderStatus, '连接错误: ' + err.message, 'error');
                     startSendingBtn.disabled = false;
                     startSendingBtn.textContent = '开始传输';
                 });
@@ -735,9 +747,15 @@
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
                             { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' }
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { 
+                                urls: 'turn:numb.viagenie.ca',
+                                credential: 'muazkh',
+                                username: 'webrtc@live.com'
+                            }
                         ]
-                    }
+                    },
+                    debug: 3
                 });
                 
                 peer.on('open', function(id) {
@@ -747,7 +765,20 @@
                     // 连接到发送方
                     conn = peer.connect(currentCode + '-sender');
                     
-                    conn.on('open', function() {
+                    // 添加连接监控
+                    monitorConnection(conn);
+                    
+                    // 设置连接超时
+                    const connectTimeout = setTimeout(() => {
+                        if(!isReceivingConfirmed) {
+                            updateStatus(receiverStatus, '连接发送方超时', 'error');
+                            startReceivingBtn.disabled = false;
+                            startReceivingBtn.textContent = '开始接收';
+                        }
+                    }, 15000);
+                    
+                    conn.on('open', () => {
+                        clearTimeout(connectTimeout);
                         updateStatus(receiverStatus, '已连接到发送方，等待文件信息...', 'connected');
                         startReceivingBtn.textContent = '等待文件信息...';
                         
@@ -811,7 +842,8 @@
                 });
                 
                 peer.on('error', function(err) {
-                    updateStatus(receiverStatus, '错误: ' + err, 'error');
+                    console.error('PeerJS错误:', err);
+                    updateStatus(receiverStatus, '连接错误: ' + err.message, 'error');
                     startReceivingBtn.disabled = false;
                     startReceivingBtn.textContent = '开始接收';
                 });
@@ -953,6 +985,20 @@
                 return icons[ext] || icons[type] || icons.default;
             }
             
+            // 连接监控
+            function monitorConnection(connection) {
+                connection.on('iceStateChange', state => {
+                    console.log('ICE状态变化:', state);
+                    if(state === 'disconnected' || state === 'failed') {
+                        updateStatus(senderStatus, '连接中断，请重试', 'error');
+                        updateStatus(receiverStatus, '连接中断，请重试', 'error');
+                    }
+                });
+                
+                connection.on('close', () => console.log('连接关闭'));
+                connection.on('error', err => console.error('连接错误:', err));
+            }
+            
             // 辅助函数
             function readNextChunk(file, offset, chunkSize) {
                 const fileSlice = file.slice(offset, offset + chunkSize);
@@ -1036,17 +1082,32 @@
                 if(typeof Peer === 'undefined') {
                     const script = document.createElement('script');
                     script.src = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js';
-                    script.onload = function() {
-                        console.log('PeerJS loaded successfully');
-                    };
+                    
+                    let retryCount = 0;
+                    const maxRetries = 3;
+                    
                     script.onerror = function() {
-                        console.error('Failed to load PeerJS');
-                        updateStatus(senderStatus, '无法加载PeerJS库，请检查网络连接', 'error');
-                        updateStatus(receiverStatus, '无法加载PeerJS库，请检查网络连接', 'error');
+                        if(retryCount < maxRetries) {
+                            retryCount++;
+                            console.log(`第${retryCount}次重载PeerJS...`);
+                            setTimeout(() => document.body.appendChild(script), 1000 * retryCount);
+                        } else {
+                            console.error('最终加载PeerJS失败');
+                            updateStatus(senderStatus, '无法加载PeerJS库', 'error');
+                            updateStatus(receiverStatus, '无法加载PeerJS库', 'error');
+                        }
                     };
+                    
                     document.body.appendChild(script);
                 }
             }
+            
+            // 全局错误处理
+            window.addEventListener('error', function(e) {
+                console.error('全局错误:', e.error);
+                updateStatus(senderStatus, `系统错误: ${e.message}`, 'error');
+                updateStatus(receiverStatus, `系统错误: ${e.message}`, 'error');
+            });
             
             // 初始化应用
             initPeerJS();
